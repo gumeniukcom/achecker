@@ -1,0 +1,6 @@
+env = "local" # dev | prod
+appName = "achecker"
+version = "v1"
+
+[logger]
+level = 0 # debug - 0, info - 1, warn - 2, error - 3, fatal - 4, panic - 5
