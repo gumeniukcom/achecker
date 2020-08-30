@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"github.com/gumeniukcom/achecker/configs"
 	"github.com/gumeniukcom/achecker/kafka"
+	"github.com/gumeniukcom/achecker/postgres"
+	"github.com/gumeniukcom/achecker/resultdaemon/dao"
 	"github.com/gumeniukcom/achecker/resultdaemon/structs"
 	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
 	jrpc "github.com/gumeniukcom/golang-jsonrpc2"
@@ -22,6 +25,8 @@ type Resoluter struct {
 	serv           *jrpc.JSONRPC
 	wg             *sync.WaitGroup
 	consumerCancel context.CancelFunc
+	db             *postgres.DB
+	dao            dao.ResultDaoer
 }
 
 const daemonName = "resultdaemon"
@@ -48,6 +53,17 @@ func New(cfg configs.Config) *Resoluter {
 	if err := daemon.serv.RegisterMethod("save_check_domain", daemon.saveCheckDomain); err != nil {
 		panic(err)
 	}
+
+	// db section
+
+	daemon.db, err = postgres.New(cfg.Postgresql)
+	if err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Failed to init pg")
+	}
+
+	daemon.dao = dao.NewDAO(daemon.db)
 
 	return daemon
 }
@@ -105,6 +121,8 @@ func (daemon *Resoluter) Stop() {
 	daemon.consumerCancel()
 	daemon.wg.Wait()
 
+	daemon.db.Stop()
+
 	log.Info().
 		Str("daemon_name", daemonName).
 		Msg("daemon stopped")
@@ -117,9 +135,34 @@ func (daemon *Resoluter) saveCheckDomain(ctx context.Context, data json.RawMessa
 	result := &structs.CheckResult{}
 	err := result.UnmarshalJSON(data)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Error on unmarshal result")
 		return nil, jrpc.InvalidRequestErrorCode, err
 	}
 
-	log.Debug().Msgf("%#v", result)
-	return nil, jrpc.OK, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	id, err := daemon.dao.AddCheckDomainResult(ctx, *result)
+
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("domain", result.Domain).
+			Msg("Error on add result to db")
+		return nil, jrpc.InvalidRequestErrorCode, err
+	}
+
+	res := structs.Result{ID: id}
+
+	resBytes, err := res.MarshalJSON()
+
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Error marshal result struct")
+		return nil, jrpc.InvalidRequestErrorCode, err
+	}
+
+	return resBytes, jrpc.OK, nil
 }

@@ -21,7 +21,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to start Sarama producer")
 	}
 
-	domains := []string{"ya.ru", "gumeniuk.cpm"}
+	domains := []string{"ya.ru", "gumeniuk.cpm", "gumeniuk.com"}
 	for _, domain := range domains {
 		if err := add(producer, cfg.CheckDaemon.CheckTopic, domain); err != nil {
 			log.Error().Err(err).Str("domain", domain).Msg("failed add task")

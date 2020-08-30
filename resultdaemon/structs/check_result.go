@@ -11,3 +11,8 @@ type CheckResult struct {
 	StatusCode int    `json:"status_code"`
 	Error      string `json:"error"`
 }
+
+//easyjson:json
+type Result struct {
+	ID int `json:"id"`
+}

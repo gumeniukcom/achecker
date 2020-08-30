@@ -19,6 +19,7 @@ type Config struct {
 	CheckDaemon  CheckDaemonConf  `mapstructure:"CHECKDAEMON" toml:"checkdaemon"`
 	Checker      CheckerConf      `mapstructure:"CHECKER" toml:"checker"`
 	ResultDaemon ResultDaemonConf `mapstructure:"RESULTDAEMON" toml:"resultdaemon"`
+	Postgresql   PostgresqlConf   `mapstructure:"POSTGRESQL" toml:"postgresql"`
 }
 
 // ReadConfig tryes to load config from Env, if can't then Toml
@@ -129,6 +130,9 @@ func createConfigFromConfer(c *confer.Config) (Config, error) {
 
 	cfg.ResultDaemon.ResultTopic = c.GetString("resultdaemon.result_topic")
 	cfg.ResultDaemon.KafkaGroup = c.GetString("resultdaemon.kafka_group")
+
+	// Postgresql block
+	cfg.Postgresql.ConnectString = c.GetString("postgresql.connect_string")
 
 	return cfg, nil
 }
