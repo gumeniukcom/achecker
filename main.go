@@ -10,7 +10,7 @@ func main() {
 
 	cfg := configs.ReadConfig("./config.toml")
 
-	a := app.New(cfg)
+	a := app.New(*cfg)
 	log.Info().
 		Msg("application running")
 	if err := a.Run(); err != nil {

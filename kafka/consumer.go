@@ -1,4 +1,4 @@
-package checkdaemon
+package kafka
 
 import (
 	"context"
@@ -9,14 +9,21 @@ import (
 
 // Consumer represents a Sarama consumer group consumer
 type Consumer struct {
-	ready chan bool
+	Ready chan bool
 	jrpc  *jrpc.JSONRPC
+}
+
+func NewConsumer(serv *jrpc.JSONRPC) *Consumer {
+	return &Consumer{
+		Ready: make(chan bool),
+		jrpc:  serv,
+	}
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
 func (consumer *Consumer) Setup(sarama.ConsumerGroupSession) error {
 	// Mark the consumer as ready
-	close(consumer.ready)
+	close(consumer.Ready)
 	return nil
 }
 

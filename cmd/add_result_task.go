@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"github.com/Shopify/sarama"
-	"github.com/gumeniukcom/achecker/checkdaemon"
-	"github.com/gumeniukcom/achecker/checkdaemon/structs"
 	"github.com/gumeniukcom/achecker/configs"
 	"github.com/gumeniukcom/achecker/kafka"
+	"github.com/gumeniukcom/achecker/resultdaemon/structs"
 	jrpc "github.com/gumeniukcom/golang-jsonrpc2"
 	"github.com/rs/zerolog/log"
 )
@@ -23,7 +22,7 @@ func main() {
 
 	domains := []string{"ya.ru", "gumeniuk.cpm"}
 	for _, domain := range domains {
-		if err := add(producer, cfg.CheckDaemon.CheckTopic, domain); err != nil {
+		if err := addResult(producer, cfg.CheckDaemon.ResultTopic, domain); err != nil {
 			log.Error().Err(err).Str("domain", domain).Msg("failed add task")
 		}
 	}
@@ -32,12 +31,13 @@ func main() {
 	}
 }
 
-func add(producer sarama.SyncProducer, topic string, domain string) error {
-	task := structs.Task{
-		Domain: domain,
+func addResult(producer sarama.SyncProducer, topic string, domain string) error {
+	result := structs.CheckResult{
+		Domain:     domain,
+		StatusCode: 200,
 	}
 
-	jreq, err := jrpc.Request(context.Background(), checkdaemon.CheckDomainMethodName, task)
+	jreq, err := jrpc.Request(context.Background(), "save_check_domain", result)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -68,14 +68,14 @@ func add(producer sarama.SyncProducer, topic string, domain string) error {
 			Err(err).
 			Str("domain", domain).
 			Str("topic", topic).
-			Msg("failed send task")
+			Msg("failed send result")
 		return err
 	}
 
 	log.Info().
 		Str("domain", domain).
 		Str("topic", topic).
-		Msg("task added")
+		Msg("result added")
 
 	return nil
 }

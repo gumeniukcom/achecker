@@ -23,5 +23,6 @@ testv:
 	go test -v $(GOFILES)
 easy:
 	easyjson --all checkdaemon/structs/task.go &\
-	easyjson --all checkdaemon/structs/check_result.go
+	easyjson --all checkdaemon/structs/check_result.go &\
+	easyjson --all resultdaemon/structs/check_result.go
 

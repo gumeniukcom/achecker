@@ -17,10 +17,11 @@ func NewClient(conf configs.KafkaConf) sarama.Client {
 
 	var err error
 
-	config.Version, err = sarama.ParseKafkaVersion(conf.Version)
 	config.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
 	config.Producer.Retry.Max = 10                   // Retry up to 10 times to produce the message
 	config.Producer.Return.Successes = true
+
+	config.Version, err = sarama.ParseKafkaVersion(conf.Version)
 
 	if err != nil {
 		log.Fatal().
@@ -49,26 +50,6 @@ func NewClient(conf configs.KafkaConf) sarama.Client {
 			Strs("brokers", conf.Brokers).
 			Msg("Failed to start Sarama client")
 	}
-
-	//producer, err := sarama.NewAsyncProducerFromClient(client)
-	//
-	//if err != nil {
-	//	log.Fatal().Err(err).Msg("Failed to start Sarama producer")
-	//}
-	//
-	//consumer, err := sarama.NewConsumerGroupFromClient(conf.Group, client)
-	//
-	//if err != nil {
-	//	log.Fatal().Err(err).Msg("Failed to start Sarama consumer")
-	//}
-	//
-	//// We will just log to STDOUT if we're not able to produce messages.
-	//// Note: messages will only be returned here after all retry attempts are exhausted.
-	//go func() {
-	//	for err := range producer.Errors() {
-	//		log.Error().Err(err).Msg("Failed to write access log entry")
-	//	}
-	//}()
 
 	return client
 }

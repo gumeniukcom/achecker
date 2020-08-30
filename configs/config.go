@@ -10,13 +10,15 @@ import (
 
 // Config ...
 type Config struct {
-	Env         string          `mapstructure:"ENV" toml:"env"`
-	AppName     string          `mapstructure:"APPNAME" toml:"appName"`
-	Version     string          `mapstructure:"VERSION" toml:"version"`
-	Logger      LoggerConf      `mapstructure:"LOGGER" toml:"logger"`
-	Kafka       KafkaConf       `mapstructure:"KAFKA" toml:"kafka"`
-	CheckDaemon CheckDaemonConf `mapstructure:"CHECKDAEMON" toml:"checkdaemon"`
-	Checker     CheckerConf     `mapstructure:"CHECKER" toml:"checker"`
+	Env          string           `mapstructure:"ENV" toml:"env"`
+	AppName      string           `mapstructure:"APPNAME" toml:"appName"`
+	Version      string           `mapstructure:"VERSION" toml:"version"`
+	Logger       LoggerConf       `mapstructure:"LOGGER" toml:"logger"`
+	Kafka        KafkaConf        `mapstructure:"KAFKA" toml:"kafka"`
+	ResultKafka  KafkaConf        `mapstructure:"RESULTKAFKA" toml:"resultkafka"`
+	CheckDaemon  CheckDaemonConf  `mapstructure:"CHECKDAEMON" toml:"checkdaemon"`
+	Checker      CheckerConf      `mapstructure:"CHECKER" toml:"checker"`
+	ResultDaemon ResultDaemonConf `mapstructure:"RESULTDAEMON" toml:"resultdaemon"`
 }
 
 // ReadConfig tryes to load config from Env, if can't then Toml
@@ -58,6 +60,10 @@ func setupDefaultConfigParameters(c *confer.Config) {
 	c.SetDefault("kafka.initial_offset", OffsetNewest)
 	c.SetDefault("kafka.version", "1.0.0.0")
 
+	// ResultKafka block
+	c.SetDefault("resultkafka.initial_offset", OffsetNewest)
+	c.SetDefault("resultkafka.version", "1.0.0.0")
+
 	// Checkdaemon block
 
 	c.SetDefault("checkdaemon.result_topic", "result")
@@ -66,6 +72,11 @@ func setupDefaultConfigParameters(c *confer.Config) {
 	// Checker conf
 	c.SetDefault("checker.timeout", 30)
 	c.SetDefault("checker.normalize", true)
+
+	// Resultdaemin block
+
+	c.SetDefault("resultdaemon.result_topic", "result")
+	c.SetDefault("resultdaemon.kafka_group", "acheckerresult")
 
 }
 
@@ -93,7 +104,18 @@ func createConfigFromConfer(c *confer.Config) (Config, error) {
 	cfg.Kafka.FileCertPath = c.GetString("kafka.certpath")
 	cfg.Kafka.Version = c.GetString("kafka.version")
 
-	//Checkdaemon block
+	// ResultKafka block
+	cfg.ResultKafka.Brokers = c.GetStringSlice("resultkafka.brokers")
+	cfg.ResultKafka.Group = c.GetString("resultkafka.group")
+	cfg.ResultKafka.Debug = c.GetBool("resultkafka.debug")
+	cfg.ResultKafka.InitialOffset = InitialOffset(c.GetString("resultkafka.initial_offset"))
+	cfg.ResultKafka.SSl = c.GetBool("resultkafka.ssl")
+	cfg.ResultKafka.FileCAPath = c.GetString("resultkafka.capath")
+	cfg.ResultKafka.FileKeyPath = c.GetString("resultkafka.keypath")
+	cfg.ResultKafka.FileCertPath = c.GetString("resultkafka.certpath")
+	cfg.ResultKafka.Version = c.GetString("resultkafka.version")
+
+	// Checkdaemon block
 
 	cfg.CheckDaemon.CheckTopic = c.GetString("checkdaemon.check_topic")
 	cfg.CheckDaemon.ResultTopic = c.GetString("checkdaemon.result_topic")
@@ -102,6 +124,11 @@ func createConfigFromConfer(c *confer.Config) (Config, error) {
 
 	cfg.Checker.Normalize = c.GetBool("checker.normalize")
 	cfg.Checker.TimeoutSecond = c.GetInt("checker.timeout")
+
+	// Resultdaemon block
+
+	cfg.ResultDaemon.ResultTopic = c.GetString("resultdaemon.result_topic")
+	cfg.ResultDaemon.KafkaGroup = c.GetString("resultdaemon.kafka_group")
 
 	return cfg, nil
 }

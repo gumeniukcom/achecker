@@ -18,7 +18,7 @@ import (
 
 // Daemon container for app
 type Daemon struct {
-	cfg            *configs.Config
+	cfg            configs.Config
 	client         sarama.Client
 	resultProducer sarama.AsyncProducer
 	consumer       sarama.ConsumerGroup
@@ -35,39 +35,39 @@ const (
 )
 
 // New return new instance of Daemon
-func New(cfg *configs.Config) *Daemon {
-	app := &Daemon{
+func New(cfg configs.Config) *Daemon {
+	daemon := &Daemon{
 		cfg:         cfg,
-		checker:     checker.New(cfg),
+		checker:     checker.New(&cfg),
 		checkTopic:  cfg.CheckDaemon.CheckTopic,
 		resultTopic: cfg.CheckDaemon.ResultTopic,
 		wg:          &sync.WaitGroup{},
 	}
 
-	app.client = kafka.NewClient(app.cfg.Kafka)
+	daemon.client = kafka.NewClient(daemon.cfg.Kafka)
 
 	var err error
 
-	app.resultProducer, err = sarama.NewAsyncProducerFromClient(app.client)
+	daemon.resultProducer, err = sarama.NewAsyncProducerFromClient(daemon.client)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to start Sarama producer")
 	}
 
-	app.consumer, err = sarama.NewConsumerGroupFromClient(cfg.Kafka.Group, app.client)
+	daemon.consumer, err = sarama.NewConsumerGroupFromClient(cfg.Kafka.Group, daemon.client)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to start Sarama consumer")
 	}
 
 	// JSONRPC20 section
-	app.serv = jrpc.New()
+	daemon.serv = jrpc.New()
 
-	if err := app.serv.RegisterMethod(CheckDomainMethodName, app.checkDomain); err != nil {
+	if err := daemon.serv.RegisterMethod(CheckDomainMethodName, daemon.checkDomain); err != nil {
 		panic(err)
 	}
 
-	return app
+	return daemon
 }
 
 // Run run application
@@ -76,10 +76,7 @@ func (daemon *Daemon) Run() error {
 		Str("daemon_name", "checker").
 		Msg("start daemon")
 
-	handler := &Consumer{
-		ready: make(chan bool),
-		jrpc:  daemon.serv,
-	}
+	handler := kafka.NewConsumer(daemon.serv)
 
 	var ctx context.Context
 
@@ -100,8 +97,6 @@ func (daemon *Daemon) Run() error {
 				return
 			}
 
-			handler.ready = make(chan bool)
-
 			select {
 			case <-ctx.Done():
 				return
@@ -111,7 +106,7 @@ func (daemon *Daemon) Run() error {
 		}
 	}()
 
-	<-handler.ready // Await till the consumer has been set up
+	<-handler.Ready // Await till the consumer has been set up
 
 	log.Info().
 		Str("daemon_name", "checker").
