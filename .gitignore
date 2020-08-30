@@ -2,3 +2,5 @@
 .env
 achecker.iml
 achecker
+kafkaca/
+config.toml

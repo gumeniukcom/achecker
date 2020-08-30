@@ -1,7 +1,8 @@
 package checker
 
 import (
-	"context"
+	"github.com/gumeniukcom/achecker/configs"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,36 +13,52 @@ import (
 const defaultTimeout = 30 * time.Second
 
 type Check struct {
-	client  *fasthttp.Client
-	timeout time.Duration
+	client    *fasthttp.Client
+	timeout   time.Duration
+	normalize bool
 }
 
-func New() *Check {
+func New(cfg *configs.Config) *Check {
 	return &Check{
-		client:  &fasthttp.Client{},
-		timeout: defaultTimeout,
+		client:    &fasthttp.Client{},
+		timeout:   time.Duration(cfg.Checker.TimeoutSecond) * time.Second,
+		normalize: cfg.Checker.Normalize,
 	}
 }
 
-func NewWithClient(client *fasthttp.Client) *Check {
+func NewWithClient(cfg *configs.Config, client *fasthttp.Client) *Check {
 	return &Check{
-		client:  client,
-		timeout: defaultTimeout,
+		client:    client,
+		timeout:   time.Duration(cfg.Checker.TimeoutSecond) * time.Second,
+		normalize: cfg.Checker.Normalize,
 	}
 }
 
+// SetTimeout set new timeout
 func (c *Check) SetTimeout(timeout time.Duration) {
 	c.timeout = timeout
-	log.Info().
+	log.Debug().
 		Float64("timeout", c.timeout.Seconds()).
 		Msg("set new timeout")
 }
 
-func (c *Check) CheckDomain(ctx context.Context, domain string) (*CheckResult, error) {
-
+// CheckDomain check domain
+func (c *Check) CheckDomain(domain string) (CheckResoluter, error) {
 	log.Debug().
 		Str("domain", domain).
 		Msg("start check domain")
+
+	if c.normalize {
+		var err error
+		domain, err = c.normalizeDomain(domain)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("domain", domain).
+				Msg("error on normalize domain")
+			return nil, err
+		}
+	}
 
 	var req fasthttp.Request
 	var resp fasthttp.Response
@@ -107,4 +124,19 @@ func (c *Check) CheckDomain(ctx context.Context, domain string) (*CheckResult, e
 		Msg("domain checked")
 
 	return result, nil
+}
+
+func (c *Check) normalizeDomain(domain string) (string, error) {
+	info, err := url.Parse(domain)
+	if err != nil {
+		log.Debug().
+			Err(err).
+			Str("domain", domain).
+			Msg("error on parse domain")
+		return "", err
+	}
+	if info.Scheme != "http" && info.Scheme != "https" {
+		info.Scheme = "http"
+	}
+	return info.String(), nil
 }

@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -28,9 +27,8 @@ func TestBaseRequest(t *testing.T) {
 	checker := New()
 
 	assert.NotNil(t, checker, "they should be Check instance")
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 
-	res, err := checker.CheckDomain(ctx, serv.URL)
+	res, err := checker.CheckDomain(serv.URL)
 
 	assert.Nil(t, err, "not error on default test")
 	assert.NotNil(t, res, "res should be not nil")
@@ -57,9 +55,8 @@ func TestBaseRequestTimeoutExceeded(t *testing.T) {
 	checker.SetTimeout(2 * time.Second)
 
 	assert.NotNil(t, checker, "they should be Checke instance")
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
 
-	res, err := checker.CheckDomain(ctx, serv.URL)
+	res, err := checker.CheckDomain(serv.URL)
 
 	assert.Nil(t, err, "error should be nil")
 	assert.NotNil(t, res.Error(), "empty error, but need real error")
@@ -83,9 +80,8 @@ func TestRequestOKStatusNot200(t *testing.T) {
 	checker := New()
 
 	assert.NotNil(t, checker, "they should be Check instance")
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 
-	res, err := checker.CheckDomain(ctx, serv.URL)
+	res, err := checker.CheckDomain(serv.URL)
 
 	assert.Nil(t, err, "not error on default test")
 	assert.NotNil(t, res, "res should be not nil")
@@ -104,9 +100,8 @@ func TestRequestOKStatusConnectionClosed(t *testing.T) {
 	checker := New()
 
 	assert.NotNil(t, checker, "they should be Check instance")
-	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 
-	res, err := checker.CheckDomain(ctx, serv.URL)
+	res, err := checker.CheckDomain(serv.URL)
 	t.Logf("%#v", res)
 	assert.Nil(t, err, "not error on default test")
 	assert.NotNil(t, res, "res should be not nil")
